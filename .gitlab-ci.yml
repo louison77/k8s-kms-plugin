@@ -2,6 +2,12 @@
 variables:
   RUNNER_GENERATE_ARTIFACTS_METADATA: "true"
 
+include:
+- template: Security/Dependency-Scanning.gitlab-ci.yml # https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Jobs/Dependency-Scanning.gitlab-ci.yml
+- template: Security/SAST.gitlab-ci.yml
+- template: Security/Container-Scanning.gitlab-ci.yml  # https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Jobs/Container-Scanning.gitlab-ci.yml
+- template: Security/Secret-Detection.gitlab-ci.yml
+
 stages:
   - release
 # Maybe syft is not installed, so it'll need to add another job or action in the script section to install syft on the runner 
