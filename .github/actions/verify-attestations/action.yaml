@@ -15,6 +15,9 @@ inputs:
   tag: 
     required : false
     description : Version of the software. 
+  checksum_file:
+    required : true
+    description : Name of the checksum.
 
 
 runs: 
@@ -32,12 +35,31 @@ runs:
       run : |
         go install github.com/slsa-framework/slsa-verifier/v2/cli/slsa-verifier@v2.5.1
     # ghcr.io/ianlewis/actions-test:v0.0.86@sha256:70205a915e3288e71b48e794e4789bf28ae4c0660c4ce340f2c48ed356b68d35
+    - shell: bash
+      name: Get the version tag 
+      id: version_tag
+      run : |
+        TAG=$(echo ${{github.ref}} | sed -e 's,refs/tags/,,')
+        echo "TAG=$TAG" >> $GITHUB_ENV
+        echo "RELEASE_URL=https://github.com/louison77/k8s-kms-plugin/releases/download/" >> $GITHUB_ENV
+        echo "CHECKSUM_FILE=k8s-kms-plugin_checksums.txt" >> $GITHUB_ENV
+        echo "PROVENANCE_FILE=multiple.intoto.jsonl" >> $GITHUB_ENV
+
     - shell: bash 
       name: verify image provenance
-      id: image-provenance
-        
+      id: image-provenance   
       run: |
           slsa-verifier verify-image ${{ inputs.image }} \
           --source-uri  github.com/${{github.repository}} \
           --builder-id https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@refs/tags/v1.10.0
-  
+    - shell: bash 
+      name: verify binary provenance
+      id: binary-provenance
+      run: |
+          CHECKSUM_URL="$RELEASE_URL$TAG/$CHECKSUM_FILE"
+          PROVENANCE_URL="$RELEASE_URL$TAG/$PROVENANCE_FILE"
+          wget "${CHECKSUM_URL}" && wget "${PROVENANCE_URL}"
+          slsa-verifier verify-artifact "$CHECKSUM_FILE" \
+          --provenance-path "$PROVENANCE_FILE" \
+          --source-uri  github.com/${{github.repository}} \
+          --builder-id https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@refs/tags/v1.10.0
